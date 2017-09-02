@@ -504,6 +504,57 @@ class ReleaseGenerator:
 
         return changed
 
+    def snapshot(
+        self,
+        identifier: str,
+        force: bool=False
+    ) -> libzfs.ZFSSnapshot:
+        """
+        Returns a ZFS snapshot of the release
+
+        Args:
+
+            identifier:
+                This string specifies the snapshots name
+
+            force: (default=False)
+                Enabling this option forces re-creation of a snapshot in case
+                it already exists for the given idenfifier
+
+        Returns:
+
+            libzfs.ZFSSnapshot: The ZFS snapshot object found or created
+        """
+
+        snapshot_name = f"{self.dataset.name}@{identifier}"
+
+        try:
+            existing_shapshot = self.zfs.get_snapshot(snapshot_name)
+            if force is False:
+                self.logger.verbose(
+                    f"Re-using release snapshot {self.name}@{identifier}"
+                )
+                return existing_shapshot
+        except libzfs.ZFSException:
+            existing_shapshot = None
+            pass
+
+        if existing_shapshot is not None:
+            self.logger.verbose(
+                f"Deleting release snapshot {self.name}@{identifier}"
+            )
+            existing_shapshot.delete()
+            existing_shapshot = None
+
+        self.dataset.snapshot(snapshot_name)
+        return self.zfs.get_snapshot(snapshot_name)
+
+    def clone_to_dataset(
+        target_dataset: libzfs.ZFSDataset,
+        identifier: str,
+        base: bool=False,
+    ):
+
     def _update_hbsd_jail(self, jail):
 
         events = libiocage.lib.events
