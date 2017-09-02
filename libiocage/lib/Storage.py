@@ -31,7 +31,6 @@ import libiocage.lib.helpers
 class Storage:
     def __init__(self, jail,
                  zfs=None,
-                 auto_create=False,
                  safe_mode=True,
                  logger=None):
 
@@ -39,11 +38,6 @@ class Storage:
         libiocage.lib.helpers.init_zfs(self, zfs)
 
         self.jail = jail
-
-        # when auto_create is enabled, non-existing zfs volumes will be
-        # automatically created if not enabled, accessing non-existent
-        # datasets will raise an error
-        self.auto_create = auto_create
 
         # safe-mody only attaches zfs datasets to jails that were tagged with
         # jailed=on already exist

@@ -23,6 +23,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 import os
 
+import libiocage.lib.Resource
 import libiocage.lib.helpers
 
 
@@ -43,14 +44,23 @@ class FstabLine(dict):
 class JailConfigFstab(set):
     AUTO_COMMENT_IDENTIFIER = "iocage-auto"
 
-    def __init__(self, jail, logger=None):
+    def __init__(
+        self,
+        resource: libiocage.lib.Resource.JailResource,
+        base_resource: libiocage.lib.Resource.Resource,
+        logger: libiocage.lib.Logger.Logger=None,
+        host: libiocage.lib.Host.HostGenerator=None
+    ):
+
         set.__init__(self)
         libiocage.lib.helpers.init_logger(self, logger)
-        self.jail = jail
+        libiocage.lib.helpers.init_host(self, host)
+        self.resource = resource
+        self.base_resource = base_resource
 
     @property
     def fstab_file_path(self):
-        return f"{self.jail.path}/fstab"
+        return f"{self.resource.dataset.mountpoint}/fstab"
 
     def parse_lines(self, input, ignore_auto_created=True):
 
@@ -114,10 +124,7 @@ class JailConfigFstab(set):
             f.truncate()
             f.close()
 
-        self.logger.verbose(f"{self.jail.path}/fstab written")
-
-    def save_with_basedirs(self):
-        return self.save()
+        self.logger.verbose(f"{self.resource.dataset.mountpoint}/fstab written")
 
     def add(self,
             source,
@@ -147,23 +154,19 @@ class JailConfigFstab(set):
 
     @property
     def basejail_lines(self):
-        basejail = self.jail.config["basejail"]
-        basejail_type = self.jail.config["basejail_type"]
 
-        if not (basejail and basejail_type == "nullfs"):
+        if self.base_resource is None:
             return []
 
         basedirs = libiocage.lib.helpers.get_basedir_list(
-            distribution_name=self.jail.host.distribution.name
+            distribution_name=self.host.distribution.name
         )
 
         fstab_basejail_lines = []
         for basedir in basedirs:
-            release_directory = self.jail.host.datasets.releases.mountpoint
 
-            cloned_release = self.jail.config["cloned_release"]
-            source = f"{release_directory}/{cloned_release}/root/{basedir}"
-            destination = f"{self.jail.path}/root/{basedir}"
+            source = f"{self.base_resource.root.mountpoint}/{basedir}"
+            destination = f"{self.resource.root.mountpoint}/{basedir}"
             fstab_basejail_lines.append({
                 "source"     : source,
                 "destination": destination,

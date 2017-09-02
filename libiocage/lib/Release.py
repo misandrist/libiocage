@@ -40,6 +40,7 @@ import libiocage.lib.events
 
 
 class ReleaseGenerator:
+
     DEFAULT_RC_CONF_SERVICES = {
         "netif": False,
         "sendmail": False,
@@ -48,13 +49,16 @@ class ReleaseGenerator:
         "sendmail_outbound": False
     }
 
-    def __init__(self, name=None,
-                 dataset=None,
-                 host=None,
-                 zfs=None,
-                 logger=None,
-                 check_hashes=True,
-                 eol=False):
+    def __init__(
+        self,
+        name: str=None,
+        dataset: libzfs.ZFSDataset=None,
+        host: libiocage.lib.Host.HostGenerator=None,
+        zfs: libzfs.ZFS=None,
+        logger: libiocage.lib.Logger.Logger=None,
+        check_hashes: bool=True,
+        eol: bool=False
+    ):
 
         libiocage.lib.helpers.init_logger(self, logger)
         libiocage.lib.helpers.init_zfs(self, zfs)

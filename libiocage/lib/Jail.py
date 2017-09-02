@@ -182,13 +182,19 @@ class JailGenerator:
         JailZfsShareMount = events.JailZfsShareMount(jail=self)
         jailServicesStartEvent = events.JailServicesStart(jail=self)
 
+        yield jailLaunchEvent.begin()
+
         if self.basejail_backend is not None:
             self.basejail_backend.apply(self.storage, release)
 
-        yield jailLaunchEvent.begin()
+        if self.config.basejail_type == "nullfs":
+            self.resource.fstab.base_resource = release.resource
+        else:
+            self.resource.fstab.base_resource = None
 
-        self.config.fstab.read_file()
-        self.config.fstab.save_with_basedirs()
+        self.resource.fstab.read_file()
+        self.resource.fstab.save()
+
         self._launch_jail()
 
         yield jailLaunchEvent.end()
@@ -402,7 +408,11 @@ class JailGenerator:
             backend.setup(self.storage, release)
 
         self.config.data["release"] = release.name
-        self.config.save()
+        self.save()
+
+    def save(self):
+        self.resource.write_config(self.config.data)
+        self.rc_conf.save()
 
     def exec(self, command, **kwargs):
         """

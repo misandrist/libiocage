@@ -21,47 +21,66 @@
 # STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
 # IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-import json
 import os.path
+import json
 
 import libiocage.lib.helpers
 
 
-class JailConfigJSON:
-    def toJSON(self):
-        data = self.data
-        output_data = {}
-        for key, value in data.items():
-            output_data[key] = libiocage.lib.helpers.to_string(
-                value,
-                true="yes",
-                false="no",
-                none="none"
-            )
-        return json.dumps(output_data, sort_keys=True, indent=4)
+def to_json(data: dict):
+    output_data = {}
+    for key, value in data.items():
+        output_data[key] = libiocage.lib.helpers.to_string(
+            value,
+            true="yes",
+            false="no",
+            none="none"
+        )
+    return json.dumps(output_data, sort_keys=True, indent=4)
 
-    def save(self):
-        config_file_path = JailConfigJSON.__get_config_json_path(self)
-        with open(config_file_path, "w") as f:
-            self.logger.verbose(f"Writing JSON config to {config_file_path}")
-            f.write(JailConfigJSON.toJSON(self))
-            self.logger.debug(f"File {config_file_path} written")
 
-    def read(self):
-        return self.clone(JailConfigJSON.read_data(self), skip_on_error=True)
+class ConfigJSON:
 
-    def read_data(self):
-        with open(JailConfigJSON.__get_config_json_path(self), "r") as conf:
-            return json.load(conf)
+    def __init__(
+        self,
+        file: str,
+        logger: libiocage.lib.Logger.Logger
+    ):
 
-    def exists(self):
-        return os.path.isfile(JailConfigJSON.__get_config_json_path(self))
+        libiocage.lib.helpers.init_logger(self, logger)
+        self._file = file
 
-    def __get_config_json_path(self):
+    @property
+    def file(self):
+        return self._file
+
+    def read(self) -> dict:
         try:
-            return f"{self.jail.dataset.mountpoint}/config.json"
+            with open(self.file, "r") as conf:
+                return json.load(conf)
         except:
-            raise libiocage.lib.errors.DatasetNotMounted(
-                dataset=self.jail.dataset,
-                logger=self.logger
-            )
+            return {}
+
+    def write(self, data: dict):
+        """
+        Writes changes to the config file
+        """
+        with open(self.file, "w") as conf:
+            conf.write(to_json(data))
+            conf.truncate()
+
+
+class ResourceConfigJSON:
+
+    def __init__(
+        self,
+        resource: libiocage.lib.Resource.Resource,
+        **kwargs
+    ):
+
+        self.resource = resource
+        JailConfigFile.__init__(self, **kwargs)
+
+    @property
+    def file(self):
+        return os.path.join(self.resource.dataset.mountpoint, self._file)
