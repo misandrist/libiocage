@@ -151,7 +151,7 @@ class JailGenerator:
         """
         Absolute path to the jail's rc.conf file
         """
-        return f"{self.path}/root/etc/rc.conf"
+        return f"{self.resource.path}/root/etc/rc.conf"
 
     @property
     def rc_conf(self):
@@ -547,7 +547,7 @@ class JailGenerator:
             f"name={self.identifier}",
             f"host.hostname={self.config['host_hostname']}",
             f"host.domainname={self.config['host_domainname']}",
-            f"path={self.path}/root",
+            f"path={self.resource.path}/root",
             f"securelevel={self.config['securelevel']}",
             f"host.hostuuid={self.name}",
             f"devfs_ruleset={self.devfs_ruleset}",
@@ -581,7 +581,7 @@ class JailGenerator:
             f"exec.clean={self.config['exec_clean']}",
             f"exec.timeout={self.config['exec_timeout']}",
             f"stop.timeout={self.config['stop_timeout']}",
-            f"mount.fstab={self.path}/fstab",
+            f"mount.fstab={self.resource.path}/fstab",
             f"mount.devfs={self.config['mount_devfs']}"
         ]
 
@@ -743,7 +743,7 @@ class JailGenerator:
     def _teardown_mounts(self):
 
         mountpoints = list(map(
-            lambda mountpoint: f"{self.path}/root{mountpoint}",
+            lambda mountpoint: f"{self.resource.path}/root{mountpoint}",
             [
                 "/dev/fd",
                 "/dev",
@@ -864,34 +864,6 @@ class JailGenerator:
             host=self.host,
             zfs=self.zfs
         )
-
-    @property
-    def dataset_name(self):
-        """
-        Name of the jail's base ZFS dataset
-        """
-        if self._dataset_name is not None:
-            return self._dataset_name
-        else:
-            return f"{self.host.datasets.root.name}/jails/{self.config['id']}"
-
-    @dataset_name.setter
-    def dataset_name(self, value=None):
-        self._dataset_name = value
-
-    @property
-    def dataset(self):
-        """
-        The jail's base ZFS dataset
-        """
-        return self.zfs.get_dataset(self.dataset_name)
-
-    @property
-    def path(self):
-        """
-        Mountpoint of the jail's base ZFS dataset
-        """
-        return self.dataset.mountpoint
 
     @property
     def logfile_path(self):

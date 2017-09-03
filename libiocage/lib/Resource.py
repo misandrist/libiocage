@@ -48,7 +48,6 @@ class Resource:
 
     def __init__(
         self,
-        dataset: libzfs.ZFSDataset,
         config_type: str="auto",
         config_file: str=None,  # 'config.json', 'config', etc
         logger: libzfs.lib.Logger.Logger=None,
@@ -58,10 +57,20 @@ class Resource:
         libiocage.lib.helpers.init_zfs(self, zfs)
         libiocage.lib.helpers.init_logger(self, logger)
 
-        self.dataset = dataset
         self._config_file = config_file
         self._config_type = None
         self.config_type = self.CONFIG_TYPES.index(config_type)
+
+    @property
+    def dataset(self):
+        return None
+
+    @property
+    def path(self):
+        """
+        Mountpoint of the jail's base ZFS dataset
+        """
+        return self.dataset.mountpoint
 
     @property
     def legacy_config_path(self):
@@ -138,12 +147,32 @@ class DefaultResource(Resource):
     DEFAULT_LEGACY_FILE = "defaults"
 
 
+class DatasetResource(Resource):
+
+    self.dataset = dataset
+
+    def __init__(
+        self,
+        dataset: libzfs.ZFSDataset,
+        **kwargs
+    ):
+
+        Resource.__init__(self)
+        self._dataset = dataset
+
 class JailResource(Resource):
 
-    def __init__(self, jail, *args, **kwargs):
+    def __init__(
+        self,
+        jail: libiocage.lib.Jail.Jail,
+        dataset_name: str=None,
+        **kwargs
+    ):
+
         self.jail = jail
         self._fstab = None
-        Resource.__init__(self, *args, **kwargs)
+        self._dataset_name = dataset_name
+        Resource.__init__(self, **kwargs)
 
     @property
     def fstab(self):
@@ -152,6 +181,29 @@ class JailResource(Resource):
                 jail=self.jail,
                 logger=self.logger
             )
+
+    @property
+    def dataset_name(self):
+        """
+        Name of the jail's base ZFS dataset
+        """
+        if self._dataset_name is not None:
+            return self._dataset_name
+        else:
+            root_dataset_name = self.jail.host.datasets.root.name
+            jail_id = self.config["id"]
+            return f"{root_dataset_name}/jails/{jail_id}"
+
+    @dataset_name.setter
+    def dataset_name(self, value=None):
+        self._dataset_name = value
+
+    @property
+    def dataset(self):
+        """
+        The jail's base ZFS dataset
+        """
+        return self.zfs.get_dataset(self.dataset_name)
 
 
 def createNewResource(
